@@ -1,0 +1,25 @@
+{
+  "name": "DompetKu - Catatan Keuangan Harian",
+  "short_name": "DompetKu",
+  "description": "Aplikasi pencatat pemasukan dan pengeluaran harian offline.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%230f172a'/%3E%3Cpath d='M144 176h224c17.7 0 32 14.3 32 32v144c0 17.7-14.3 32-32 32H144c-17.7 0-32-14.3-32-32V208c0-17.7 14.3-32 32-32z' fill='%2310b981'/%3E%3Cpath d='M336 256h64v48h-64c-13.3 0-24-10.7-24-24s10.7-24 24-24z' fill='%230f172a'/%3E%3Ccircle cx='336' cy='280' r='8' fill='%23ffffff'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%230f172a'/%3E%3Cpath d='M144 176h224c17.7 0 32 14.3 32 32v144c0 17.7-14.3 32-32 32H144c-17.7 0-32-14.3-32-32V208c0-17.7 14.3-32 32-32z' fill='%2310b981'/%3E%3Cpath d='M336 256h64v48h-64c-13.3 0-24-10.7-24-24s10.7-24 24-24z' fill='%230f172a'/%3E%3Ccircle cx='336' cy='280' r='8' fill='%23ffffff'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
