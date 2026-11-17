@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="DompetKu" />
+  <title>DompetKu — Catatan Keuangan Harian</title>
+  <link rel="manifest" href="./manifest.json" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      -webkit-tap-highlight-color: transparent;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    /* Hide scrollbar for clean mobile feel */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen pb-20">
+
+  <!-- Header -->
+  <header class="bg-slate-900 text-white sticky top-0 z-30 shadow-md">
+    <div class="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center font-bold text-slate-900 text-lg shadow">
+          Rp
+        </div>
+        <div>
+          <h1 class="font-bold text-base leading-tight">DompetKu</h1>
+          <div class="flex items-center gap-1.5 text-xs text-slate-300">
+            <span id="status-dot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span id="status-text">Siap Offline</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button id="btn-install" class="hidden bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-semibold text-xs px-3 py-1.5 rounded-lg transition">
+          + Pasang App
+        </button>
+        <button onclick="toggleBackupModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs px-3 py-1.5 rounded-lg border border-slate-700 transition">
+          Backup / CSV
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-3xl mx-auto px-4 pt-5 space-y-5">
+
+    <!-- Kartu Ringkasan Saldo -->
+    <section class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-5 shadow-lg">
+      <div class="flex justify-between items-start mb-4">
+        <div>
+          <p class="text-xs uppercase tracking-wider text-slate-400">Sisa Saldo Periode Ini</p>
+          <h2 id="total-balance" class="text-2xl sm:text-3xl font-extrabold mt-1 tracking-tight">Rp 0</h2>
+        </div>
+        <input type="month" id="filter-month" class="bg-slate-800 text-white text-xs border border-slate-600 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-400" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 pt-3 border-t border-slate-700/80">
+        <div class="bg-slate-800/60 rounded-xl p-3">
+          <p class="text-xs text-emerald-400 font-medium">Total Pemasukan</p>
+          <p id="total-income" class="text-base sm:text-lg font-bold text-white mt-0.5">Rp 0</p>
+        </div>
+        <div class="bg-slate-800/60 rounded-xl p-3">
+          <p class="text-xs text-rose-400 font-medium">Total Pengeluaran</p>
+          <p id="total-expense" class="text-base sm:text-lg font-bold text-white mt-0.5">Rp 0</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Form Tambah Transaksi -->
+    <section class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80">
+      <h3 class="font-bold text-sm text-slate-700 mb-3">Catat Transaksi Baru</h3>
+      <form id="tx-form" class="space-y-3">
+        <!-- Switch Jenis -->
+        <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+          <button type="button" id="tab-expense" onclick="setTxType('expense')" class="py-2 text-xs font-bold rounded-lg bg-rose-500 text-white shadow-sm transition">
+            - Pengeluaran
+          </button>
+          <button type="button" id="tab-income" onclick="setTxType('income')" class="py-2 text-xs font-bold rounded-lg text-slate-600 transition">
+            + Pemasukan
+          </button>
+        </div>
+        <input type="hidden" id="tx-type" value="expense" />
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Nominal (Rp)</label>
+            <input type="text" id="tx-amount" inputmode="numeric" placeholder="0" required
+              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold text-base focus:outline-none focus:ring-2 focus:ring-slate-900" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Kategori</label>
+            <select id="tx-category" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-900"></select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Tanggal</label>
+            <input type="date" id="tx-date" required
+              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-900" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">Catatan (Opsional)</label>
+            <input type="text" id="tx-note" placeholder="Contoh: Makan siang, Bensin..."
+              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900" />
+          </div>
+        </div>
+
+        <button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 active:scale-[0.99] text-white font-semibold py-3 rounded-xl text-sm shadow transition">
+          Simpan Transaksi
+        </button>
+      </form>
+    </section>
+
+    <!-- Grafik Pengeluaran -->
+    <section id="chart-section" class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80 hidden">
+      <h3 class="font-bold text-sm text-slate-700 mb-3">Proporsi Pengeluaran</h3>
+      <div class="max-w-[240px] mx-auto">
+        <canvas id="expenseChart"></canvas>
+      </div>
+    </section>
+
+    <!-- Riwayat Transaksi -->
+    <section class="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200/80">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+        <h3 class="font-bold text-sm text-slate-700">Riwayat Transaksi</h3>
+        <div class="flex gap-2">
+          <input type="text" id="search-input" placeholder="Cari catatan..." class="w-full sm:w-44 px-3 py-1.5 text-xs rounded-lg border border-slate-300 focus:outline-none" />
+          <select id="filter-type" class="px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 bg-white">
+            <option value="all">Semua</option>
+            <option value="expense">Pengeluaran</option>
+            <option value="income">Pemasukan</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="tx-list" class="divide-y divide-slate-100"></div>
+    </section>
+
+  </main>
+
+  <!-- Modal Backup & Restore -->
+  <div id="backup-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-2xl max-w-md w-full p-5 shadow-xl space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="font-bold text-base text-slate-800">Kelola & Cadangkan Data</h3>
+        <button onclick="toggleBackupModal()" class="text-slate-400 hover:text-slate-700 text-xl leading-none">&times;</button>
+      </div>
+      <p class="text-xs text-slate-500 leading-relaxed">
+        Semua data tersimpan di memori HP Anda. Unduh cadangan secara berkala agar data tetap aman.
+      </p>
+      <div class="space-y-2.5">
+        <button onclick="exportCSV()" class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition">
+          Unduh Laporan Excel (.CSV)
+        </button>
+        <button onclick="exportJSON()" class="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-semibold transition">
+          Backup Data Penuh (.JSON)
+        </button>
+        <label class="block w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold text-center cursor-pointer transition">
+          Pulihkan dari File (.JSON)
+          <input type="file" accept=".json" onchange="importJSON(event)" class="hidden" />
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'dompetku_transactions_v1';
+    const CATEGORIES = {
+      expense: ['Makan & Minum', 'Transportasi & BBM', 'Belanja Harian', 'Tagihan & Pulsa', 'Kesehatan', 'Hiburan', 'Lainnya'],
+      income: ['Gaji / Upah', 'Bonus / Lembur', 'Usaha / Sampingan', 'Hadiah', 'Lainnya']
+    };
+
+    let transactions = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    let chartInstance = null;
+    let deferredPrompt = null;
+
+    // Inisialisasi Tanggal & Bulan Default
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    document.getElementById('tx-date').value = `${yyyy}-${mm}-${dd}`;
+    document.getElementById('filter-month').value = `${yyyy}-${mm}`;
+
+    // Format Rupiah Input
+    const amountInput = document.getElementById('tx-amount');
+    amountInput.addEventListener('input', (e) => {
+      const raw = e.target.value.replace(/\D/g, '');
+      e.target.value = raw ? Number(raw).toLocaleString('id-ID') : '';
+    });
+
+    function formatRupiah(num) {
+      return 'Rp ' + Number(num || 0).toLocaleString('id-ID');
+    }
+
+    function setTxType(type) {
+      document.getElementById('tx-type').value = type;
+      const btnExp = document.getElementById('tab-expense');
+      const btnInc = document.getElementById('tab-income');
+
+      if (type === 'expense') {
+        btnExp.className = 'py-2 text-xs font-bold rounded-lg bg-rose-500 text-white shadow-sm transition';
+        btnInc.className = 'py-2 text-xs font-bold rounded-lg text-slate-600 transition';
+      } else {
+        btnInc.className = 'py-2 text-xs font-bold rounded-lg bg-emerald-500 text-white shadow-sm transition';
+        btnExp.className = 'py-2 text-xs font-bold rounded-lg text-slate-600 transition';
+      }
+
+      const catSelect = document.getElementById('tx-category');
+      catSelect.innerHTML = CATEGORIES[type].map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+
+    // Simpan Transaksi
+    document.getElementById('tx-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const rawAmount = Number(amountInput.value.replace(/\D/g, ''));
+      if (!rawAmount || rawAmount <= 0) return;
+
+      const newTx = {
+        id: Date.now().toString(),
+        type: document.getElementById('tx-type').value,
+        amount: rawAmount,
+        category: document.getElementById('tx-category').value,
+        date: document.getElementById('tx-date').value,
+        note: document.getElementById('tx-note').value.trim()
+      };
+
+      transactions.unshift(newTx);
+      saveAndRender();
+      amountInput.value = '';
+      document.getElementById('tx-note').value = '';
+    });
+
+    function deleteTx(id) {
+      if (!confirm('Hapus catatan transaksi ini?')) return;
+      transactions = transactions.filter(t => t.id !== id);
+      saveAndRender();
+    }
+
+    function saveAndRender() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+      renderApp();
+    }
+
+    function renderApp() {
+      const selectedMonth = document.getElementById('filter-month').value;
+      const filterType = document.getElementById('filter-type').value;
+      const keyword = document.getElementById('search-input').value.toLowerCase();
+
+      const monthlyTx = transactions.filter(t => !selectedMonth || t.date.startsWith(selectedMonth));
+
+      let income = 0, expense = 0;
+      const expenseByCat = {};
+
+      monthlyTx.forEach(t => {
+        if (t.type === 'income') {
+          income += t.amount;
+        } else {
+          expense += t.amount;
+          expenseByCat[t.category] = (expenseByCat[t.category] || 0) + t.amount;
+        }
+      });
+
+      document.getElementById('total-income').textContent = formatRupiah(income);
+      document.getElementById('total-expense').textContent = formatRupiah(expense);
+      document.getElementById('total-balance').textContent = formatRupiah(income - expense);
+
+      // Render List
+      const filteredList = monthlyTx
+        .filter(t => filterType === 'all' || t.type === filterType)
+        .filter(t => !keyword || t.category.toLowerCase().includes(keyword) || (t.note && t.note.toLowerCase().includes(keyword)))
+        .sort((a, b) => b.date.localeCompare(a.date));
+
+      const listEl = document.getElementById('tx-list');
+      if (filteredList.length === 0) {
+        listEl.innerHTML = `<p class="text-center text-xs text-slate-400 py-8">Belum ada catatan transaksi pada periode ini.</p>`;
+      } else {
+        listEl.innerHTML = filteredList.map(t => {
+          const isExp = t.type === 'expense';
+          return `
+            <div class="py-3 flex items-center justify-between gap-3">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-slate-800 truncate">${t.category}</span>
+                  <span class="text-[11px] text-slate-400">${t.date}</span>
+                </div>
+                ${t.note ? `<p class="text-xs text-slate-500 truncate mt-0.5">${t.note}</p>` : ''}
+              </div>
+              <div class="flex items-center gap-3 shrink-0">
+                <span class="text-xs sm:text-sm font-bold ${isExp ? 'text-rose-600' : 'text-emerald-600'}">
+                  ${isExp ? '-' : '+'} ${formatRupiah(t.amount)}
+                </span>
+                <button onclick="deleteTx('${t.id}')" class="text-slate-300 hover:text-rose-500 text-sm px-1" title="Hapus">&times;</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      renderChart(expenseByCat);
+    }
+
+    function renderChart(expenseByCat) {
+      const chartSection = document.getElementById('chart-section');
+      const labels = Object.keys(expenseByCat);
+      const data = Object.values(expenseByCat);
+
+      if (labels.length === 0 || typeof Chart === 'undefined') {
+        chartSection.classList.add('hidden');
+        return;
+      }
+
+      chartSection.classList.remove('hidden');
+      const ctx = document.getElementById('expenseChart').getContext('2d');
+      if (chartInstance) chartInstance.destroy();
+
+      chartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data,
+            backgroundColor: ['#f43f5e', '#f59e0b', '#3b82f6', '#8b5cf6', '#10b981', '#06b6d4', '#64748b'],
+            borderWidth: 2,
+            borderColor: '#ffffff'
+          }]
+        },
+        options: {
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } }
+          }
+        }
+      });
+    }
+
+    // Event Filter
+    document.getElementById('filter-month').addEventListener('change', renderApp);
+    document.getElementById('filter-type').addEventListener('change', renderApp);
+    document.getElementById('search-input').addEventListener('input', renderApp);
+
+    // Backup & Export
+    function toggleBackupModal() {
+      const modal = document.getElementById('backup-modal');
+      modal.classList.toggle('hidden');
+      modal.classList.toggle('flex');
+    }
+
+    function exportCSV() {
+      if (!transactions.length) return alert('Belum ada data untuk diekspor.');
+      const header = ['Tanggal,Jenis,Kategori,Nominal,Catatan'];
+      const rows = transactions.map(t =>
+        `${t.date},${t.type === 'income' ? 'Pemasukan' : 'Pengeluaran'},"${t.category}",${t.amount},"${(t.note || '').replace(/"/g, '""')}"`
+      );
+      downloadFile(header.concat(rows).join('\n'), `DompetKu_${yyyy}-${mm}.csv`, 'text/csv');
+    }
+
+    function exportJSON() {
+      downloadFile(JSON.stringify(transactions, null, 2), `Backup_DompetKu_${yyyy}-${mm}-${dd}.json`, 'application/json');
+    }
+
+    function importJSON(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const parsed = JSON.parse(ev.target.result);
+          if (Array.isArray(parsed)) {
+            transactions = parsed;
+            saveAndRender();
+            toggleBackupModal();
+            alert('Data berhasil dipulihkan!');
+          }
+        } catch {
+          alert('Format file JSON tidak valid.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function downloadFile(content, filename, mime) {
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // Status Online / Offline
+    function updateNetworkStatus() {
+      const dot = document.getElementById('status-dot');
+      const text = document.getElementById('status-text');
+      if (navigator.onLine) {
+        dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+        text.textContent = 'Online (Tersimpan Lokal)';
+      } else {
+        dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+        text.textContent = 'Mode Offline Aktif';
+      }
+    }
+    window.addEventListener('online', updateNetworkStatus);
+    window.addEventListener('offline', updateNetworkStatus);
+
+    // Registrasi Service Worker & Tombol Install PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(() => {});
+      });
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const btnInstall = document.getElementById('btn-install');
+      btnInstall.classList.remove('hidden');
+      btnInstall.onclick = async () => {
+        if (!deferredPrompt) return;
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt = null;
+        btnInstall.classList.add('hidden');
+      };
+    });
+
+    // Jalankan Inisialisasi
+    setTxType('expense');
+    updateNetworkStatus();
+    renderApp();
+  </script>
+</body>
+</html>
